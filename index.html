@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>论文投稿管理系统</title>
+<script>
+(function () {
+  try {
+    var KEY = 'law_paper_submit_theme_v1';
+    var t = localStorage.getItem(KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (t === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    }
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'light');
+  }
+})();
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#faf9f7;
+  --panel:#ffffff;
+  --line:#e2ddd6;
+  --text:#2f2b27;
+  --muted:#6f6860;
+  --primary:#6d8f7c;
+  --primary-hover:#5c7d6a;
+  --primary-soft:#e9f0ec;
+  --radius:16px;
+  --shadow:0 2px 12px rgba(120,110,100,.06);
+}
+html[data-theme="light"]{color-scheme:light;}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#141719;
+  --panel:#1f2427;
+  --line:#343b40;
+  --text:#e6e2dc;
+  --muted:#9aa3ab;
+  --primary:#8db89b;
+  --primary-hover:#9ec9ac;
+  --primary-soft:#26332c;
+  --shadow:0 2px 12px rgba(0,0,0,.35);
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Serif SC","Songti SC",serif;
+  background-color:var(--bg);
+  color:var(--text);
+  padding:28px 20px 40px;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:.2px;
+  transition:background-color .25s ease, color .25s ease;
+}
+.wrap{max-width:1240px;margin:0 auto;position:relative;}
+
+/* ---------- 主题开关（固定于页面右上角，不悬浮） ---------- */
+.theme-toggle{
+  position:absolute;
+  top:0;
+  right:0;
+  z-index:10;
+  width:58px;
+  height:32px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  cursor:pointer;
+  padding:0;
+  box-shadow:var(--shadow);
+  transition:transform .1s ease, background-color .25s ease, border-color .25s ease, box-shadow .25s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.theme-toggle .knob{
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--primary);
+  color:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  line-height:1;
+  transition:transform .28s cubic-bezier(.4,0,.2,1), background-color .25s ease, color .25s ease;
+}
+.theme-toggle .knob::before{content:"☀";}
+html[data-theme="dark"] .theme-toggle .knob{
+  transform:translateX(26px);
+  background:#e8c97a;
+  color:#3a3020;
+}
+html[data-theme="dark"] .theme-toggle .knob::before{content:"☾";}
+.theme-toggle:active{transform:scale(.96);}
+.theme-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+
+/* ---------- 顶部（居中） ---------- */
+.top{
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;gap:16px;margin-bottom:24px;
+  padding-bottom:22px;border-bottom:1px solid var(--line);
+}
+.top h1{
+  font-size:24px;font-weight:600;letter-spacing:1px;
+  color:#332f2b;
+  padding-right:70px;
+  padding-left:70px;
+}
+.top-actions{
+  display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+}
+
+/* ---------- 通用按钮 ---------- */
+.btn{
+  border:none;border-radius:10px;padding:10px 20px;
+  font-size:13.5px;font-weight:500;cursor:pointer;
+  transition:transform .1s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease;
+  font-family:inherit;letter-spacing:.3px;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn.primary{
+  background:var(--primary);color:#fff;
+  box-shadow:0 3px 10px rgba(109,143,124,.28);
+}
+.btn.ghost{
+  background:var(--primary-soft);color:#4f6b5c;
+}
+.btn.tiny{
+  padding:6px 13px;font-size:12.5px;
+  background:var(--primary-soft);color:#4f6b5c;
+  font-weight:400;border-radius:8px;
+}
+
+/* ---------- 统计 ---------- */
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:14px;margin-bottom:22px;
+}
+.stat{
+  position:relative;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:16px 20px;
+  box-shadow:var(--shadow);
+}
+.stat-num{
+  font-size:26px;font-weight:600;line-height:1.15;
+  color:#4a443e;
+}
+.stat-label{
+  font-size:12.5px;color:var(--muted);margin-top:5px;
+  font-weight:400;letter-spacing:.3px;
+}
+.stat-num.warn{color:#b08c4a;}
+.stat-num.danger{color:#b85c5c;}
+.stat-num.ok{color:#5f8a72;}
+
+/* 可编辑的统计卡片（7 天内截止） */
+.stat-editable{
+  cursor:pointer;
+  transition:transform .1s ease, border-color .2s ease, box-shadow .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.stat-editable:active{transform:scale(.985);}
+.stat-editable:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+.edit-hint{
+  display:inline-block;
+  margin-left:4px;
+  font-size:11px;
+  color:var(--primary);
+  opacity:0;
+  transition:opacity .2s ease;
+}
+
+/* 编辑层 */
+.soon-editor{
+  position:absolute;inset:0;z-index:3;
+  background:var(--panel);
+  border:1px solid var(--primary);
+  border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:0 10px;
+}
+.soon-editor input{
+  width:58px;padding:5px 6px;font-size:14px;text-align:center;
+  font-family:inherit;border:1px solid var(--line);border-radius:8px;
+  background:#fff;color:var(--text);outline:none;transition:.15s;
+  -moz-appearance:textfield;
+}
+.soon-editor input::-webkit-outer-spin-button,
+.soon-editor input::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+.soon-editor input:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(109,143,124,.14);
+}
+.soon-editor .soon-unit{font-size:12px;color:var(--muted);}
+.soon-editor button{
+  border:none;border-radius:7px;padding:5px 10px;
+  font-size:12px;font-family:inherit;cursor:pointer;
+  transition:transform .1s ease, background-color .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.soon-editor button:active{transform:scale(.94);}
+.soon-ok{background:var(--primary);color:#fff;}
+.soon-cancel{background:var(--primary-soft);color:#4f6b5c;}
+
+/* ---------- 布局 ---------- */
+.main{
+  display:grid;grid-template-columns:380px minmax(0,1fr);
+  gap:20px;align-items:start;
+}
+.panel{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:18px;
+  box-shadow:var(--shadow);
+}
+
+/* ---------- 日历 ---------- */
+.cal-head{
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+}
+.cal-title{
+  flex:1;text-align:center;font-size:15px;font-weight:500;
+  color:#332f2b;letter-spacing:.5px;
+}
+.nav-btn{
+  width:30px;height:30px;border-radius:8px;border:none;
+  background:var(--primary-soft);color:#4f6b5c;
+  font-size:17px;cursor:pointer;line-height:1;transition:transform .1s ease, background-color .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* 年份 / 月份跳转：默认隐藏，悬停日历或聚焦时显示 */
+.cal-jump{
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:14px;padding:8px 10px;
+  background:#f6f4f1;border:1px solid var(--line);
+  border-radius:10px;flex-wrap:wrap;
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(-3px);
+  transition:opacity .22s ease, transform .22s ease;
+}
+.cal-panel.hovered .cal-jump,
+.cal-jump:focus-within{
+  opacity:1;
+  pointer-events:auto;
+  transform:none;
+}
+.jump-label{
+  font-size:12px;color:var(--muted);letter-spacing:.3px;
+  flex:none;
+}
+.jump-input{
+  width:66px;padding:5px 6px;
+  border:1px solid var(--line);border-radius:8px;
+  font-family:inherit;font-size:12.5px;background:#fff;color:var(--text);
+  text-align:center;outline:none;transition:.15s;
+  -moz-appearance:textfield;
+}
+.jump-input::-webkit-outer-spin-button,
+.jump-input::-webkit-inner-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+.jump-select{
+  padding:5px 6px;
+  border:1px solid var(--line);border-radius:8px;
+  font-family:inherit;font-size:12.5px;background:#fff;color:var(--text);
+  cursor:pointer;outline:none;transition:.15s;
+}
+.jump-unit{font-size:12px;color:var(--muted);flex:none;}
+.jump-input:focus,.jump-select:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(109,143,124,.14);
+}
+.jump-btn{
+  margin-left:auto;flex:none;
+  padding:5px 12px;font-size:12px;
+  background:var(--primary);color:#fff;border:none;border-radius:8px;
+  font-family:inherit;cursor:pointer;letter-spacing:.3px;
+  transition:transform .1s ease, background-color .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.jump-btn:active{transform:scale(.94);}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-dow{
+  text-align:center;font-size:11px;color:var(--muted);
+  font-weight:500;padding:2px 0 8px;letter-spacing:.5px;
+}
+.cal-cell{
+  height:46px;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;position:relative;
+  border:1.5px solid transparent;transition:transform .1s ease, background-color .18s ease;
+  user-select:none;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.cal-cell.other{color:#b5aea5;}
+.cal-cell.today{
+  border-color:var(--primary);color:var(--primary);font-weight:600;
+}
+.cal-cell.selected{background:var(--primary-soft);}
+.cal-cell.has-item{font-weight:500;}
+.dots{position:absolute;bottom:5px;display:flex;gap:3px;}
+.dot{width:5px;height:5px;border-radius:50%;}
+
+.legend{
+  display:flex;gap:16px;margin-top:16px;padding-top:14px;
+  border-top:1px dashed var(--line);
+  font-size:11.5px;color:var(--muted);flex-wrap:wrap;
+}
+.legend span{display:flex;align-items:center;gap:5px;letter-spacing:.3px;}
+.legend i{
+  width:7px;height:7px;border-radius:50%;display:inline-block;
+}
+
+/* 使用说明按钮（日历下方居中） */
+.help-row{
+  display:flex;justify-content:center;margin-top:16px;
+}
+
+/* ---------- 列表 ---------- */
+.list-head{
+  display:flex;justify-content:space-between;gap:12px;
+  align-items:center;margin-bottom:16px;flex-wrap:wrap;
+}
+.filters{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  border:1px solid var(--line);background:#fff;
+  color:#6f6860;font-size:13px;padding:6px 16px;
+  border-radius:999px;cursor:pointer;
+  transition:transform .1s ease, background-color .2s ease, color .2s ease, border-color .2s ease;
+  font-family:inherit;letter-spacing:.3px;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.chip.active{
+  background:var(--primary);border-color:var(--primary);
+  color:#fff;font-weight:500;
+}
+.sort-select{
+  border:1px solid var(--line);border-radius:9px;
+  padding:7px 12px;font-size:13px;background:#fff;
+  color:#5a544d;font-family:inherit;cursor:pointer;outline:none;
+  letter-spacing:.3px;
+}
+
+.date-filter{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--primary-soft);border:1px solid #d5e2da;
+  border-radius:10px;padding:9px 14px;font-size:13px;
+  color:#4a6a5a;margin-bottom:14px;
+}
+.date-filter.hidden{display:none;}
+
+.item-card{
+  border:1px solid var(--line);border-left:4px solid #ccc;
+  border-radius:12px;padding:15px 17px;
+  margin-bottom:12px;transition:transform .2s ease, box-shadow .2s ease;
+  background:#fff;
+}
+.item-card.past{opacity:.72;}
+
+.item-head{
+  display:flex;justify-content:space-between;
+  align-items:flex-start;gap:12px;
+}
+.item-title{
+  display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;min-width:0;
+}
+.name{
+  font-weight:600;font-size:15px;word-break:break-word;
+  color:#332f2b;letter-spacing:.3px;
+}
+.badge{
+  font-size:11px;font-weight:500;padding:2.5px 9px;
+  border-radius:6px;flex:none;letter-spacing:.3px;
+}
+.badge.journal{background:#e6edf1;color:#45657a;}
+.badge.conference{background:#e4efe8;color:#3f7a5c;}
+.badge.forum{background:#f2ebe2;color:#8a6a45;}
+.badge.project{background:#ede8f1;color:#6a5a7a;}
+.badge.other{background:#ece9e4;color:#6f6860;}
+.prio{
+  font-size:11px;font-weight:500;padding:2px 8px;
+  border-radius:6px;flex:none;letter-spacing:.3px;
+}
+.cd{
+  font-size:12.5px;font-weight:500;padding:4px 12px;
+  border-radius:999px;white-space:nowrap;flex:none;
+  letter-spacing:.3px;
+}
+.cd.urgent{background:#fbe3e3;color:#b04a4a;}
+.cd.soon{background:#faeadd;color:#a86e32;}
+.cd.normal{background:#f5efdc;color:#8a6d2e;}
+.cd.far{background:#e4efe8;color:#3f7a5c;}
+.cd.overdue{background:#ebe8e4;color:#7a736a;}
+.cd.done{background:#e1eaf5;color:#4a6a8e;}
+
+.item-meta{
+  display:flex;flex-wrap:wrap;gap:6px 18px;
+  margin-top:10px;font-size:12.5px;color:#6f6860;
+  letter-spacing:.2px;
+}
+.item-note{
+  margin-top:9px;font-size:12.5px;color:#7a736a;
+  background:#f6f4f1;border-radius:8px;
+  padding:8px 12px;line-height:1.6;
+}
+.item-actions{
+  display:flex;gap:8px;margin-top:12px;justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.mini{
+  border:none;background:var(--primary-soft);color:#4f6b5c;
+  font-size:12px;padding:5px 13px;border-radius:7px;
+  cursor:pointer;font-family:inherit;letter-spacing:.3px;
+  transition:transform .1s ease, background-color .2s ease, color .2s ease;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.mini.done{background:#e0ece4;color:#3f6a53;font-weight:500;}
+.mini.undo{background:#e6ebf5;color:#5a6a8e;}
+.mini.danger{background:#fbe3e3;color:#a84a4a;}
+
+.empty{
+  text-align:center;padding:56px 20px;
+  color:#a39b92;font-size:14px;line-height:2;
+  letter-spacing:.3px;
+}
+.empty .big{font-size:38px;margin-bottom:12px;opacity:.6;}
+
+/* ---------- 弹窗 ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(60,55,50,.35);
+  backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;opacity:0;pointer-events:none;
+  transition:.25s;z-index:100;
+}
+.overlay.show{opacity:1;pointer-events:auto;}
+.modal{
+  background:#fff;border-radius:20px;padding:26px;
+  width:100%;max-width:560px;max-height:90vh;
+  overflow-y:auto;transform:translateY(14px) scale(.98);
+  transition:.25s;box-shadow:0 28px 70px rgba(60,50,40,.22);
+}
+.overlay.show .modal{transform:none;}
+.modal h2{
+  font-size:17px;margin-bottom:20px;
+  font-weight:600;color:#332f2b;letter-spacing:.5px;
+}
+.form{
+  display:grid;grid-template-columns:1fr 1fr;gap:15px;
+}
+.form label{
+  display:flex;flex-direction:column;gap:6px;
+  font-size:12.5px;color:#6f6860;font-weight:500;
+  letter-spacing:.3px;
+}
+.form label.full{grid-column:1/-1;}
+.form input,.form select,.form textarea{
+  font-family:inherit;font-size:13.5px;
+  padding:10px 12px;border:1px solid var(--line);
+  border-radius:9px;outline:none;background:#faf9f7;
+  color:var(--text);transition:.2s;width:100%;
+  letter-spacing:.2px;
+}
+.form input:focus,.form select:focus,.form textarea:focus{
+  border-color:var(--primary);background:#fff;
+  box-shadow:0 0 0 3px rgba(109,143,124,.14);
+}
+.form textarea{resize:vertical;min-height:72px;}
+.modal-actions{
+  display:flex;justify-content:flex-end;gap:10px;margin-top:24px;
+}
+
+/* ---------- 使用说明弹窗 ---------- */
+.help-modal{max-width:640px;}
+.help-list{
+  list-style:none;margin:0;padding:0;
+  counter-reset:help;
+}
+.help-list li{
+  counter-increment:help;
+  position:relative;padding-left:30px;
+  font-size:13.5px;color:#4a443e;line-height:1.9;
+  margin-bottom:14px;letter-spacing:.2px;
+  text-align:justify;
+}
+.help-list li::before{
+  content:counter(help) ".";
+  position:absolute;left:0;top:0;
+  font-weight:600;color:var(--primary);
+  font-size:13.5px;
+}
+.help-list li b{color:#332f2b;font-weight:600;}
+
+/* ---------- 实用工具 ---------- */
+.tools-section{
+  margin-top:26px;
+}
+.tools-toggle{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 20px;
+  font-family:inherit;font-size:14px;font-weight:500;
+  color:#5a544d;letter-spacing:.5px;cursor:pointer;
+  transition:transform .1s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+  box-shadow:var(--shadow);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.tools-toggle .arrow{
+  transition:transform .25s;font-size:10px;color:var(--muted);
+}
+.tools-toggle.open .arrow{transform:rotate(180deg);}
+
+.tools-panel{
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .38s ease, opacity .3s ease, margin .3s ease;
+  margin-top:0;
+}
+.tools-panel.open{
+  max-height:360px;opacity:1;margin-top:12px;
+}
+.tool-link{
+  display:flex;align-items:center;gap:14px;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:14px 18px;margin-bottom:10px;
+  text-decoration:none;color:inherit;
+  transition:transform .1s ease, border-color .2s ease, box-shadow .2s ease;
+  box-shadow:var(--shadow);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.tool-icon{
+  font-size:20px;flex:none;width:40px;height:40px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--primary-soft);border-radius:10px;
+}
+.tool-text{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;}
+.tool-text b{font-size:14px;font-weight:600;color:#332f2b;letter-spacing:.3px;}
+.tool-text small{font-size:12px;color:#6f6860;letter-spacing:.2px;}
+.tool-go{color:#8a837a;font-size:15px;flex:none;transition:.2s;}
+
+/* ---------- 版权 ---------- */
+.copyright{
+  margin-top:34px;padding-top:24px;
+  border-top:1px solid var(--line);
+  text-align:center;font-size:12px;color:#8a837a;
+  line-height:2;letter-spacing:.5px;
+}
+.copyright p{margin:0;}
+.visitor-counter{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.visitor-counter span{
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:.5px;
+}
+.visitor-counter img{
+  display:block;
+  width:180px;
+  height:auto;
+}
+html[data-theme="dark"] .visitor-counter img{
+  filter:brightness(.9) contrast(1.05);
+}
+
+/* ---------- 键盘焦点 ---------- */
+.btn:focus-visible,
+.nav-btn:focus-visible,
+.chip:focus-visible,
+.mini:focus-visible,
+.tools-toggle:focus-visible,
+.tool-link:focus-visible,
+.cal-cell:focus-visible,
+.sort-select:focus-visible,
+.theme-toggle:focus-visible,
+.jump-btn:focus-visible,
+.jump-input:focus-visible,
+.jump-select:focus-visible,
+.stat-editable:focus-visible{
+  outline:2px solid var(--primary);
+  outline-offset:2px;
+}
+
+/* ---------- Hover（仅精确指针设备） ---------- */
+@media (hover:hover) and (pointer:fine){
+  .btn.primary:hover{background:var(--primary-hover);box-shadow:0 5px 16px rgba(109,143,124,.36);}
+  .btn.ghost:hover,.btn.tiny:hover{background:#dfe9e3;}
+  .nav-btn:hover{background:#dfe9e3;}
+  .chip:hover{border-color:#c9c2b9;background:#f5f2ee;}
+  .chip.active:hover{background:var(--primary-hover);border-color:var(--primary-hover);}
+  .mini:hover{background:#dfe9e3;}
+  .mini.done:hover{background:#cfe2d6;}
+  .mini.undo:hover{background:#dde4f2;}
+  .mini.danger:hover{background:#f5d5d5;}
+  .tools-toggle:hover{background:#f5f2ee;border-color:#cfc8bf;}
+  .tool-link:hover{border-color:#cfc8bf;transform:translateY(-1px);box-shadow:0 6px 18px rgba(120,110,100,.1);}
+  .tool-link:hover .tool-go{color:var(--primary);transform:translate(2px,-2px);}
+  .item-card:hover{box-shadow:0 8px 24px rgba(120,110,100,.09);transform:translateY(-2px);}
+  .cal-cell:hover{background:#f2efe9;}
+  .jump-btn:hover{background:var(--primary-hover);}
+  .stat-editable:hover{border-color:#cfc8bf;box-shadow:0 4px 14px rgba(120,110,100,.1);}
+  .stat-editable:hover .edit-hint{opacity:1;}
+}
+
+/* ---------- 按下缩小（触屏 / 鼠标 / 键盘均可） ---------- */
+.btn:active,
+.btn.primary:active,
+.btn.ghost:active,
+.btn.tiny:active{transform:scale(.96);}
+.btn.primary:active{background:#54735f;}
+
+.nav-btn:active{transform:scale(.9);}
+.chip:active{transform:scale(.95);}
+.chip.active:active{background:#54735f;border-color:#54735f;}
+.mini:active{transform:scale(.94);}
+.tools-toggle:active{transform:scale(.99);}
+.tool-link:active,
+.tool-link:hover:active{transform:scale(.985);}
+.cal-cell:active{transform:scale(.92);}
+
+/* =========================================================
+   夜晚模式
+   ========================================================= */
+html[data-theme="dark"] body{background-color:var(--bg);color:var(--text);}
+html[data-theme="dark"] .top{border-bottom-color:var(--line);}
+html[data-theme="dark"] .top h1{color:#f0ece6;}
+
+html[data-theme="dark"] .btn.primary{color:#141719;box-shadow:0 3px 10px rgba(0,0,0,.35);}
+html[data-theme="dark"] .btn.ghost,
+html[data-theme="dark"] .btn.tiny{background:#26332c;color:#a8c4b2;}
+
+html[data-theme="dark"] .stat-num{color:#e6e2dc;}
+html[data-theme="dark"] .stat-num.warn{color:#d4b06a;}
+html[data-theme="dark"] .stat-num.danger{color:#e08080;}
+html[data-theme="dark"] .stat-num.ok{color:#8db89b;}
+html[data-theme="dark"] .stat-editable:hover{border-color:#4a5259;box-shadow:0 4px 14px rgba(0,0,0,.4);}
+html[data-theme="dark"] .soon-editor input{background:#262c30;border-color:var(--line);color:#e6e2dc;}
+html[data-theme="dark"] .soon-editor input:focus{background:#2b3236;}
+html[data-theme="dark"] .soon-ok{color:#141719;}
+html[data-theme="dark"] .soon-cancel{background:#26332c;color:#a8c4b2;}
+
+html[data-theme="dark"] .cal-title{color:#f0ece6;}
+html[data-theme="dark"] .nav-btn{background:#26332c;color:#a8c4b2;}
+html[data-theme="dark"] .cal-cell.other{color:#5a626a;}
+
+html[data-theme="dark"] .cal-jump{background:#1a1f22;border-color:var(--line);}
+html[data-theme="dark"] .jump-input,
+html[data-theme="dark"] .jump-select{background:#262c30;border-color:var(--line);color:#e6e2dc;}
+
+html[data-theme="dark"] .chip{background:#262c30;color:#b8b2a9;}
+html[data-theme="dark"] .chip.active{background:var(--primary);border-color:var(--primary);color:#141719;}
+html[data-theme="dark"] .sort-select{background:#262c30;color:#c8c2b9;}
+
+html[data-theme="dark"] .date-filter{background:#26332c;border-color:#34463c;color:#9ec9ac;}
+
+html[data-theme="dark"] .item-card{background:var(--panel);}
+html[data-theme="dark"] .name{color:#f0ece6;}
+html[data-theme="dark"] .item-meta{color:#9aa3ab;}
+html[data-theme="dark"] .item-note{background:#1a1f22;color:#9aa3ab;}
+
+html[data-theme="dark"] .badge.journal{background:#26343c;color:#8fb0c4;}
+html[data-theme="dark"] .badge.conference{background:#24332a;color:#8dbfa0;}
+html[data-theme="dark"] .badge.forum{background:#332b22;color:#c4a37a;}
+html[data-theme="dark"] .badge.project{background:#2d2735;color:#a99bc4;}
+html[data-theme="dark"] .badge.other{background:#2c3033;color:#a8b0b8;}
+
+html[data-theme="dark"] .cd.urgent{background:#3a2424;color:#e08888;}
+html[data-theme="dark"] .cd.soon{background:#3a2f20;color:#d4a86a;}
+html[data-theme="dark"] .cd.normal{background:#33301f;color:#c9b06a;}
+html[data-theme="dark"] .cd.far{background:#24332a;color:#8dbfa0;}
+html[data-theme="dark"] .cd.overdue{background:#2a2d30;color:#8a929a;}
+html[data-theme="dark"] .cd.done{background:#1f2c3a;color:#7ea8cf;}
+
+html[data-theme="dark"] .mini{background:#26332c;color:#a8c4b2;}
+html[data-theme="dark"] .mini.done{background:#22332a;color:#8dbfa0;}
+html[data-theme="dark"] .mini.undo{background:#232a38;color:#96a8cf;}
+html[data-theme="dark"] .mini.danger{background:#3a2424;color:#e08888;}
+
+html[data-theme="dark"] .empty{color:#6a737b;}
+
+html[data-theme="dark"] .overlay{background:rgba(0,0,0,.6);}
+html[data-theme="dark"] .modal{background:#1f2427;box-shadow:0 28px 70px rgba(0,0,0,.6);}
+html[data-theme="dark"] .modal h2{color:#f0ece6;}
+html[data-theme="dark"] .form label{color:#9aa3ab;}
+html[data-theme="dark"] .form input,
+html[data-theme="dark"] .form select,
+html[data-theme="dark"] .form textarea{background:#262c30;border-color:var(--line);color:#e6e2dc;}
+html[data-theme="dark"] .form input:focus,
+html[data-theme="dark"] .form select:focus,
+html[data-theme="dark"] .form textarea:focus{background:#2b3236;}
+
+html[data-theme="dark"] .help-list li{color:#c8c2b9;}
+html[data-theme="dark"] .help-list li b{color:#f0ece6;}
+
+html[data-theme="dark"] .tools-toggle{background:var(--panel);color:#b8b2a9;}
+html[data-theme="dark"] .tool-icon{background:#26332c;}
+html[data-theme="dark"] .tool-text b{color:#f0ece6;}
+html[data-theme="dark"] .tool-text small{color:#9aa3ab;}
+html[data-theme="dark"] .tool-go{color:#7a838b;}
+
+html[data-theme="dark"] .copyright{color:#7a838b;}
+
+@media (hover:hover) and (pointer:fine){
+  html[data-theme="dark"] .chip:hover{background:#2d3438;border-color:#4a5259;}
+  html[data-theme="dark"] .chip.active:hover{background:var(--primary-hover);border-color:var(--primary-hover);}
+  html[data-theme="dark"] .cal-cell:hover{background:#2a3135;}
+  html[data-theme="dark"] .btn.ghost:hover,
+  html[data-theme="dark"] .btn.tiny:hover,
+  html[data-theme="dark"] .nav-btn:hover,
+  html[data-theme="dark"] .mini:hover{background:#2f3d34;}
+  html[data-theme="dark"] .mini.done:hover{background:#2a4033;}
+  html[data-theme="dark"] .mini.undo:hover{background:#2b3446;}
+  html[data-theme="dark"] .mini.danger:hover{background:#4a2c2c;}
+  html[data-theme="dark"] .tools-toggle:hover{background:#262c30;border-color:#4a5259;}
+  html[data-theme="dark"] .tool-link:hover{border-color:#4a5259;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+  html[data-theme="dark"] .item-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.45);}
+  html[data-theme="dark"] .jump-btn:hover{background:var(--primary-hover);}
+}
+
+html[data-theme="dark"] .btn.primary:active{background:#7aa88a;}
+html[data-theme="dark"] .chip.active:active{background:#7aa88a;border-color:#7aa88a;}
+
+@media(max-width:900px){
+  .main{grid-template-columns:1fr;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:520px){
+  .form{grid-template-columns:1fr;}
+  body{padding:16px 12px 40px;}
+  .cal-cell{height:40px;font-size:12px;}
+  .top h1{font-size:20px;padding-right:62px;padding-left:62px;}
+  .theme-toggle{width:52px;height:29px;top:0;right:0;}
+  .theme-toggle .knob{width:21px;height:21px;top:3px;left:3px;font-size:12px;}
+  html[data-theme="dark"] .theme-toggle .knob{transform:translateX(23px);}
+  .jump-input{width:58px;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- 主题开关：固定在页面右上角，随页面滚动 -->
+  <button class="theme-toggle" id="themeToggle" type="button"
+    aria-pressed="false" aria-label="切换到夜晚模式" title="切换到夜晚模式">
+    <span class="knob" aria-hidden="true"></span>
+  </button>
+
+  <header class="top">
+    <h1>论文投稿管理系统</h1>
+    <div class="top-actions">
+      <button class="btn primary" id="btnAdd">＋ 新增投稿目标</button>
+      <button class="btn ghost" id="btnExport">下载日志</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="statTotal">0</div><div class="stat-label">全部目标</div></div>
+    <div class="stat stat-editable" id="statSoonCard" role="button" tabindex="0"
+      title="点击修改提醒天数" aria-label="修改提醒天数">
+      <div class="stat-num warn" id="statSoon">0</div>
+      <div class="stat-label"><span id="statSoonLabel">7 天内截止</span><span class="edit-hint">点击修改</span></div>
+    </div>
+    <div class="stat"><div class="stat-num danger" id="statOverdue">0</div><div class="stat-label">已逾期未投</div></div>
+    <div class="stat"><div class="stat-num ok" id="statDone">0</div><div class="stat-label">已投稿 / 申报</div></div>
+  </div>
+
+  <div class="main">
+
+    <!-- 日历 -->
+    <section class="panel cal-panel" id="calPanel">
+      <div class="cal-head">
+        <button class="nav-btn" id="prevMonth" aria-label="上个月">‹</button>
+        <div class="cal-title" id="calTitle"></div>
+        <button class="nav-btn" id="nextMonth" aria-label="下个月">›</button>
+        <button class="btn tiny" id="btnToday">今天</button>
+      </div>
+
+      <!-- 年份 / 月份跳转：默认隐藏，悬停日历或聚焦时显示 -->
+      <div class="cal-jump" id="calJump">
+        <span class="jump-label">跳转</span>
+        <input type="number" id="jumpYear" class="jump-input"
+          min="1900" max="2100" step="1" inputmode="numeric" aria-label="年份">
+        <span class="jump-unit">年</span>
+        <select id="jumpMonth" class="jump-select" aria-label="月份">
+          <option value="1">1 月</option>
+          <option value="2">2 月</option>
+          <option value="3">3 月</option>
+          <option value="4">4 月</option>
+          <option value="5">5 月</option>
+          <option value="6">6 月</option>
+          <option value="7">7 月</option>
+          <option value="8">8 月</option>
+          <option value="9">9 月</option>
+          <option value="10">10 月</option>
+          <option value="11">11 月</option>
+          <option value="12">12 月</option>
+        </select>
+        <button type="button" class="jump-btn" id="btnJump">前往</button>
+      </div>
+
+      <div class="cal-grid" id="calDow">
+        <div class="cal-dow">日</div><div class="cal-dow">一</div><div class="cal-dow">二</div>
+        <div class="cal-dow">三</div><div class="cal-dow">四</div><div class="cal-dow">五</div>
+        <div class="cal-dow">六</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="legend">
+        <span><i style="background:#b85c5c"></i>高优先级</span>
+        <span><i style="background:#b08c4a"></i>中优先级</span>
+        <span><i style="background:#5f8a72"></i>低优先级</span>
+        <span>（点击日期可筛选）</span>
+      </div>
+      <div class="help-row">
+        <button class="btn ghost" id="btnHelp">使用说明</button>
+      </div>
+    </section>
+
+    <!-- 列表 -->
+    <section class="panel">
+      <div class="list-head">
+        <div class="filters" id="typeFilters">
+          <button class="chip active" data-type="all">全部</button>
+          <button class="chip" data-type="journal">期刊</button>
+          <button class="chip" data-type="conference">会议</button>
+          <button class="chip" data-type="forum">论坛</button>
+          <button class="chip" data-type="project">课题</button>
+          <button class="chip" data-type="other">其他</button>
+        </div>
+        <select class="sort-select" id="sortSelect" aria-label="排序方式">
+          <option value="deadline">按截止日期</option>
+          <option value="priority">按优先级</option>
+          <option value="created">按添加时间</option>
+        </select>
+      </div>
+
+      <div class="date-filter hidden" id="dateFilterBar">
+        <span>已筛选日期：<b id="dfDate"></b></span>
+        <button class="mini" id="btnClearDate">清除筛选</button>
+      </div>
+
+      <div id="listBody"></div>
+    </section>
+
+  </div>
+
+  <!-- 实用工具 -->
+  <section class="tools-section">
+    <button class="tools-toggle" id="btnTools" aria-expanded="false">
+      <span>🧰 实用工具</span>
+      <span class="arrow">▾</span>
+    </button>
+    <div class="tools-panel" id="toolsPanel">
+      <a class="tool-link" href="https://pegaseius.github.io/faxuezhuan/" target="_blank" rel="noopener noreferrer">
+        <span class="tool-icon">⚖️</span>
+        <span class="tool-text">
+          <b>《法学引注手册》引用格式转换器</b>
+          <small>法律文献引注格式一键转换</small>
+        </span>
+        <span class="tool-go">↗</span>
+      </a>
+      <a class="tool-link" href="https://pegaseius.github.io/lawschoolreferencetest/" target="_blank" rel="noopener noreferrer">
+        <span class="tool-icon">📚</span>
+        <span class="tool-text">
+          <b>参考文献排序工具</b>
+          <small>按规范自动排序参考文献</small>
+        </span>
+        <span class="tool-go">↗</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 版权信息 -->
+  <footer class="copyright">
+    <p>作者：中单兔法师 &nbsp;·&nbsp; 小红书：3895712578</p>
+    <p>2022-2026 ©</p>
+    <div class="visitor-counter">
+      <span>累计访问人数</span>
+      <img src="https://count.getloli.com/get/@lawschoolreferencetest" alt="累计访问人数计数器">
+    </div>
+  </footer>
+
+</div>
+
+<!-- 新增 / 编辑弹窗 -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">新增投稿目标</h2>
+    <div class="form">
+      <label class="full">名称 *
+        <input id="fName" placeholder="例如：法学研究 / 中国刑事诉讼法学研究会年会 / 国家社科基金青年项目">
+      </label>
+      <label>类型
+        <select id="fType">
+          <option value="conference">会议</option>
+          <option value="journal">期刊</option>
+          <option value="forum">论坛</option>
+          <option value="project">课题</option>
+          <option value="other">其他</option>
+        </select>
+      </label>
+      <label>优先级
+        <select id="fPriority">
+          <option value="high">高</option>
+          <option value="medium" selected>中</option>
+          <option value="low">低</option>
+        </select>
+      </label>
+      <label>截止日期 *
+        <input type="date" id="fDeadline">
+      </label>
+      <label>已投稿 / 申报时间
+        <input type="date" id="fSubmitted">
+      </label>
+      <label class="full">已投稿论文 / 课题题目
+        <input id="fPaper" placeholder="选填，例如：数字时代个人信息保护的公法机制研究">
+      </label>
+      <label class="full">备注
+        <textarea id="fNote" placeholder="选填，例如：需通过系统提交申报书，格式参照《国家社科基金项目申请书》"></textarea>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancel">取消</button>
+      <button class="btn primary" id="btnSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 使用说明弹窗 -->
+<div class="overlay" id="helpOverlay">
+  <div class="modal help-modal">
+    <h2>使用说明</h2>
+    <ol class="help-list">
+      <li><b>系统用途：</b>本系统用于集中管理个人法学论文的期刊、会议、论坛、课题及其他投稿计划，记录截止日期（DDL）、优先级、拟投论文题目、已投稿时间与备注信息。</li>
+      <li><b>新增记录：</b>点击页面顶部「新增投稿目标」按钮，依次填写名称、类型、优先级、截止日期及论文题目等信息，确认无误后点击「保存」。</li>
+      <li><b>日历标记：</b>页面左侧日历以彩色圆点标注各目标的截止日期，圆点颜色对应优先级（红为高、黄为中、绿为低）；点击任一日期可筛选当日截止的目标，再次点击即可取消筛选。</li>
+      <li><b>日历跳转：</b>鼠标移入日历区域（或按 Tab 聚焦输入框）时，日历上方会显示「跳转」栏，可输入年份、选择月份，点击「前往」或按回车键快速跳转到指定年月；焦点仍在跳转栏内时，即使鼠标移开也不会收起，可从容输入。也可使用左右箭头逐月翻动，或点击「今天」回到当前月份。</li>
+      <li><b>倒计时提示：</b>列表卡片右侧显示距截止日期的剩余天数，并按紧急程度以不同颜色区分；已逾期未投的目标将显示逾期天数，以便及时处理。顶部「7 天内截止」统计卡片可点击，修改提醒天数（1–365 天），确认后系统会按新天数重新统计并记住该设置。</li>
+      <li><b>完成投稿：</b>论文投出后，点击卡片中的「完成投稿」按钮，系统自动将当日记为投稿日期；若需更正，可点击「撤销完成」恢复未投稿状态。</li>
+      <li><b>编辑与删除：</b>如需修改记录，点击卡片右下角「编辑」按钮；如需移除记录，点击「删除」按钮并确认即可。</li>
+      <li><b>数据保存：</b>所有记录均保存于本机浏览器中，关闭或刷新页面后数据不会丢失；但清理浏览器数据可能导致记录被清除，建议定期备份。</li>
+      <li><b>下载日志：</b>点击页面顶部「下载日志」按钮，可将全部投稿记录导出为 CSV 文件，便于存档、打印或进一步分析。</li>
+      <li><b>实用工具：</b>页面底部「实用工具」栏目提供「《法学引注手册》引用格式转换器」与「参考文献排序工具」两个入口，点击即可在新标签页中打开使用。</li>
+      <li><b>夜间模式：</b>点击页面右上角的开关可切换白天 / 夜晚模式，系统会自动记住您的选择。</li>
+    </ol>
+    <div class="modal-actions">
+      <button class="btn primary" id="btnHelpClose">知道了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const KEY = 'law_paper_submit_mgr_v1';
+  const THEME_KEY = 'law_paper_submit_theme_v1';
+  const SOON_KEY = 'law_paper_submit_soon_days_v1';
+  const MIN_YEAR = 1900;
+  const MAX_YEAR = 2100;
+  const MIN_SOON = 1;
+  const MAX_SOON = 365;
+  const $ = id => document.getElementById(id);
+
+  const TYPE = {
+    journal:    { label: '期刊', cls: 'journal' },
+    conference: { label: '会议', cls: 'conference' },
+    forum:      { label: '论坛', cls: 'forum' },
+    project:    { label: '课题', cls: 'project' },
+    other:      { label: '其他', cls: 'other' }
+  };
+  const PRIORITY = {
+    high:   { label: '高', color: '#b85c5c', order: 0 },
+    medium: { label: '中', color: '#b08c4a', order: 1 },
+    low:    { label: '低', color: '#5f8a72', order: 2 }
+  };
+
+  let items = [];
+  let viewYear, viewMonth;
+  let selectedDate = null;
+  let filterType = 'all';
+  let sortMode = 'deadline';
+  let editingId = null;
+  let soonDays = 7;
+
+  /* ---------------- 工具函数 ---------------- */
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const todayStr = () => fmt(new Date());
+  const daysUntil = s => {
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((parseDate(s) - t) / 86400000);
+  };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const esc = s => String(s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+  const csvCell = v => {
+    const s = String(v == null ? '' : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  /* ---------------- 数据存取 ---------------- */
+  function load() {
+    try { items = JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (e) { items = []; }
+    if (!Array.isArray(items)) items = [];
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {}
+  }
+
+  /* ---------------- 提醒天数存取 ---------------- */
+  function loadSoonDays() {
+    try {
+      const v = parseInt(localStorage.getItem(SOON_KEY), 10);
+      if (Number.isFinite(v) && v >= MIN_SOON && v <= MAX_SOON) soonDays = v;
+    } catch (e) {}
+  }
+  function saveSoonDays() {
+    try { localStorage.setItem(SOON_KEY, String(soonDays)); } catch (e) {}
+  }
+
+  /* ---------------- 法学示例数据（标题均标注“示例”） ---------------- */
+  function seed() {
+    const d = n => {
+      const t = new Date(); t.setDate(t.getDate() + n);
+      return fmt(t);
+    };
+    return [
+      {
+        id: uid(),
+        name: '《清华法学》“人工智能时代的法律问题”专刊（示例）',
+        type: 'journal',
+        deadline: d(42),
+        priority: 'high',
+        paperTitle: '生成式人工智能的侵权责任配置研究',
+        submittedDate: '',
+        note: 'CSSCI/CLSCI 来源期刊，征稿截止 2026-08-31，需通过编辑部邮箱投稿',
+        createdAt: Date.now() - 6000
+      },
+      {
+        id: uid(),
+        name: '中国刑事诉讼法学研究会2026年青年学者学术年会（示例）',
+        type: 'conference',
+        deadline: d(18),
+        priority: 'high',
+        paperTitle: '论值班律师的有效辩护功能及其制度保障',
+        submittedDate: '',
+        note: '征稿截止 2026-06-30 17:00，字数 1.5–2 万字，注释体例参照《中国法学》，邮箱 QNXZXSNH@126.com',
+        createdAt: Date.now() - 5000
+      },
+      {
+        id: uid(),
+        name: '山东省法学会民商法学研究会2026年年会（示例）',
+        type: 'forum',
+        deadline: d(65),
+        priority: 'medium',
+        paperTitle: '民法典体系下居住权制度的解释论展开',
+        submittedDate: '',
+        note: '投稿截止 2026-08-15，格式参照《法学研究》引注规范，邮箱 SDMSF2026@163.com',
+        createdAt: Date.now() - 4000
+      },
+      {
+        id: uid(),
+        name: '2027年度国家社科基金青年项目（法学）（示例）',
+        type: 'project',
+        deadline: d(120),
+        priority: 'high',
+        paperTitle: '数字时代个人信息保护的公法机制研究',
+        submittedDate: '',
+        note: '预计 2027-02-20 前提交申报书，需提前完成选题论证与前期成果梳理，以学校科研处通知为准',
+        createdAt: Date.now() - 3000
+      },
+      {
+        id: uid(),
+        name: '《中南财经政法大学研究生论丛》2026年第5期（示例）',
+        type: 'journal',
+        deadline: d(90),
+        priority: 'low',
+        paperTitle: '',
+        submittedDate: '',
+        note: '“法学争鸣”版块，截稿 2026-09-04 24:00，限在读研究生，字数 1–1.5 万字',
+        createdAt: Date.now() - 2000
+      },
+      {
+        id: uid(),
+        name: '第二十二届“长三角法学论坛”（示例）',
+        type: 'forum',
+        deadline: d(-12),
+        priority: 'medium',
+        paperTitle: '区域协同治理的法治保障机制研究',
+        submittedDate: d(-30),
+        note: '征文截止 2026-08-07，已提交 Word 版并完成投稿信息填写',
+        createdAt: Date.now() - 1000
+      }
+    ];
+  }
+
+  /* ---------------- 主题切换 ---------------- */
+  function initThemeToggle() {
+    const btn = $('themeToggle');
+    const sync = () => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      const label = dark ? '切换到白天模式' : '切换到夜晚模式';
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+    };
+    sync();
+    btn.addEventListener('click', () => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next = dark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+      sync();
+    });
+  }
+
+  /* ---------------- 跳转栏显隐控制 ---------------- */
+  function initJumpVisibility() {
+    const panel = $('calPanel');
+    const jump = $('calJump');
+    if (!panel || !jump) return;
+
+    let hideTimer = null;
+
+    const show = () => {
+      clearTimeout(hideTimer);
+      panel.classList.add('hovered');
+    };
+
+    const hideLater = (delay) => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (jump.contains(document.activeElement)) return;
+        if (jump.matches(':hover')) return;
+        panel.classList.remove('hovered');
+      }, delay);
+    };
+
+    panel.addEventListener('pointerenter', show);
+    panel.addEventListener('pointerleave', () => hideLater(900));
+
+    jump.addEventListener('focusin', show);
+    jump.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (jump.contains(document.activeElement)) return;
+        if (panel.matches(':hover')) return;
+        clearTimeout(hideTimer);
+        panel.classList.remove('hovered');
+      }, 0);
+    });
+
+    panel.addEventListener('pointerdown', show);
+  }
+
+  /* ---------------- 提醒天数内联编辑 ---------------- */
+  function openSoonEditor() {
+    const card = $('statSoonCard');
+    if (!card) return;
+    if (card.querySelector('.soon-editor')) return;
+
+    const editor = document.createElement('div');
+    editor.className = 'soon-editor';
+    editor.innerHTML =
+      '<input type="number" class="soon-input" min="' + MIN_SOON + '" max="' + MAX_SOON +
+      '" step="1" value="' + soonDays + '" inputmode="numeric" aria-label="提醒天数">' +
+      '<span class="soon-unit">天</span>' +
+      '<button type="button" class="soon-ok">确定</button>' +
+      '<button type="button" class="soon-cancel">取消</button>';
+
+    card.appendChild(editor);
+
+    const input = editor.querySelector('.soon-input');
+
+    const close = () => {
+      editor.remove();
+      try { card.focus(); } catch (e) {}
+    };
+
+    const commit = () => {
+      const v = parseInt(input.value, 10);
+      if (!Number.isFinite(v) || v < MIN_SOON || v > MAX_SOON) {
+        input.focus();
+        input.select();
+        return;
+      }
+      soonDays = v;
+      saveSoonDays();
+      close();
+      renderStats();
+    };
+
+    editor.querySelector('.soon-ok').addEventListener('click', commit);
+    editor.querySelector('.soon-cancel').addEventListener('click', close);
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(); }
+    });
+
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+  }
+
+  function initSoonCard() {
+    const card = $('statSoonCard');
+    if (!card) return;
+
+    card.addEventListener('click', e => {
+      if (e.target.closest('.soon-editor')) return;
+      openSoonEditor();
+    });
+
+    card.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('.soon-editor')) return;
+      e.preventDefault();
+      openSoonEditor();
+    });
+  }
+
+  /* ---------------- 日历跳转 ---------------- */
+  function jumpTo() {
+    const yRaw = $('jumpYear').value.trim();
+    const y = parseInt(yRaw, 10);
+    const m = parseInt($('jumpMonth').value, 10);
+
+    if (!yRaw || !Number.isFinite(y) || y < MIN_YEAR || y > MAX_YEAR) {
+      alert(`请输入 ${MIN_YEAR}–${MAX_YEAR} 之间的年份`);
+      $('jumpYear').focus();
+      $('jumpYear').select();
+      return;
+    }
+    if (!Number.isFinite(m) || m < 1 || m > 12) {
+      alert('请选择月份');
+      $('jumpMonth').focus();
+      return;
+    }
+
+    viewYear = y;
+    viewMonth = m - 1;
+    renderCalendar();
+  }
+
+  /* ---------------- 初始化 ---------------- */
+  function init() {
+    const now = new Date();
+    viewYear = now.getFullYear();
+    viewMonth = now.getMonth();
+    load();
+    loadSoonDays();
+    if (items.length === 0) { items = seed(); save(); }
+    initThemeToggle();
+    initJumpVisibility();
+    initSoonCard();
+    bindEvents();
+    renderAll();
+
+    let lastDay = todayStr();
+    setInterval(() => {
+      const t = todayStr();
+      if (t !== lastDay) { lastDay = t; renderAll(); }
+    }, 60000);
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  function bindEvents() {
+    $('btnAdd').addEventListener('click', () => openModal(null));
+    $('btnExport').addEventListener('click', exportCSV);
+
+    $('prevMonth').addEventListener('click', () => {
+      viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      renderCalendar();
+    });
+    $('nextMonth').addEventListener('click', () => {
+      viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      renderCalendar();
+    });
+    $('btnToday').addEventListener('click', () => {
+      const t = new Date();
+      viewYear = t.getFullYear(); viewMonth = t.getMonth();
+      selectedDate = null;
+      renderCalendar();
+      renderList();
+    });
+
+    $('btnJump').addEventListener('click', jumpTo);
+    $('jumpYear').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); jumpTo(); }
+    });
+    $('jumpMonth').addEventListener('change', jumpTo);
+
+    $('calGrid').addEventListener('click', e => {
+      const cell = e.target.closest('.cal-cell');
+      if (!cell) return;
+      const ds = cell.dataset.date;
+      selectedDate = (selectedDate === ds) ? null : ds;
+      const d = parseDate(ds);
+      if (d.getMonth() !== viewMonth || d.getFullYear() !== viewYear) {
+        viewYear = d.getFullYear(); viewMonth = d.getMonth();
+      }
+      renderCalendar();
+      renderList();
+    });
+
+    $('calGrid').addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const cell = e.target.closest('.cal-cell');
+      if (!cell) return;
+      e.preventDefault();
+      cell.click();
+    });
+
+    $('typeFilters').addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      filterType = chip.dataset.type;
+      Array.from($('typeFilters').children).forEach(c =>
+        c.classList.toggle('active', c === chip));
+      renderList();
+    });
+
+    $('sortSelect').addEventListener('change', e => {
+      sortMode = e.target.value;
+      renderList();
+    });
+
+    $('btnClearDate').addEventListener('click', () => {
+      selectedDate = null;
+      renderCalendar();
+      renderList();
+    });
+
+    $('listBody').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+
+      if (act === 'del') {
+        const it = items.find(i => i.id === id);
+        if (it && confirm(`确定删除「${it.name}」吗？`)) {
+          items = items.filter(i => i.id !== id);
+          save();
+          renderAll();
+        }
+      } else if (act === 'edit') {
+        const it = items.find(i => i.id === id);
+        if (it) openModal(it);
+      } else if (act === 'done') {
+        const it = items.find(i => i.id === id);
+        if (it) {
+          it.submittedDate = todayStr();
+          save();
+          renderAll();
+        }
+      } else if (act === 'undo') {
+        const it = items.find(i => i.id === id);
+        if (it) {
+          it.submittedDate = '';
+          save();
+          renderAll();
+        }
+      }
+    });
+
+    $('btnHelp').addEventListener('click', () => {
+      $('helpOverlay').classList.add('show');
+    });
+    $('btnHelpClose').addEventListener('click', () => {
+      $('helpOverlay').classList.remove('show');
+    });
+    $('helpOverlay').addEventListener('click', e => {
+      if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('show');
+    });
+
+    $('btnTools').addEventListener('click', () => {
+      const open = $('btnTools').classList.toggle('open');
+      $('toolsPanel').classList.toggle('open');
+      $('btnTools').setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    $('btnCancel').addEventListener('click', closeModal);
+    $('overlay').addEventListener('click', e => {
+      if (e.target === $('overlay')) closeModal();
+    });
+    $('btnSave').addEventListener('click', saveItem);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        $('helpOverlay').classList.remove('show');
+      }
+    });
+  }
+
+  /* ---------------- 导出 CSV 日志 ---------------- */
+  function exportCSV() {
+    if (items.length === 0) {
+      alert('当前没有任何投稿记录，暂时无法导出日志。');
+      return;
+    }
+
+    const header = [
+      '名称', '类型', '优先级', '截止日期', '已投稿/申报时间',
+      '论文/课题题目', '备注', '状态', '剩余天数', '添加时间'
+    ];
+
+    const rows = items.map(it => {
+      const tp = TYPE[it.type] || TYPE.other;
+      const p = PRIORITY[it.priority] || PRIORITY.medium;
+      const d = daysUntil(it.deadline);
+
+      let status, remain;
+      if (it.submittedDate) {
+        status = '已提交'; remain = '—';
+      } else if (d < 0) {
+        status = '已逾期'; remain = String(d);
+      } else if (d === 0) {
+        status = '今天截止'; remain = '0';
+      } else {
+        status = '进行中'; remain = String(d);
+      }
+
+      return [
+        it.name,
+        tp.label,
+        p.label,
+        it.deadline,
+        it.submittedDate || '',
+        it.paperTitle || '',
+        it.note || '',
+        status,
+        remain,
+        it.createdAt ? fmt(new Date(it.createdAt)) : ''
+      ];
+    });
+
+    const csv = '\uFEFF' +
+      [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `论文投稿日志_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function renderAll() {
+    renderStats();
+    renderCalendar();
+    renderList();
+  }
+
+  function renderStats() {
+    const soon = items.filter(i => !i.submittedDate &&
+      daysUntil(i.deadline) >= 0 && daysUntil(i.deadline) <= soonDays).length;
+    const overdue = items.filter(i => !i.submittedDate && daysUntil(i.deadline) < 0).length;
+    const done = items.filter(i => i.submittedDate).length;
+    $('statTotal').textContent = items.length;
+    $('statSoon').textContent = soon;
+    $('statOverdue').textContent = overdue;
+    $('statDone').textContent = done;
+
+    const label = $('statSoonLabel');
+    if (label) label.textContent = soonDays + ' 天内截止';
+    const card = $('statSoonCard');
+    if (card) {
+      card.title = `点击修改提醒天数（当前 ${soonDays} 天）`;
+      card.setAttribute('aria-label', `修改提醒天数，当前 ${soonDays} 天`);
+    }
+  }
+
+  function renderCalendar() {
+    $('calTitle').textContent = `${viewYear} 年 ${viewMonth + 1} 月`;
+
+    const yEl = $('jumpYear');
+    const mEl = $('jumpMonth');
+    if (document.activeElement !== yEl) yEl.value = String(viewYear);
+    if (document.activeElement !== mEl) mEl.value = String(viewMonth + 1);
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+    const today = todayStr();
+
+    const byDate = {};
+    items.forEach(it => {
+      if (!byDate[it.deadline]) byDate[it.deadline] = [];
+      byDate[it.deadline].push(it);
+    });
+
+    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+    let html = '';
+
+    for (let i = 0; i < totalCells; i++) {
+      let dayNum, dateObj, other = false;
+
+      if (i < firstDay) {
+        dayNum = daysInPrev - firstDay + 1 + i;
+        dateObj = new Date(viewYear, viewMonth - 1, dayNum);
+        other = true;
+      } else if (i < firstDay + daysInMonth) {
+        dayNum = i - firstDay + 1;
+        dateObj = new Date(viewYear, viewMonth, dayNum);
+      } else {
+        dayNum = i - firstDay - daysInMonth + 1;
+        dateObj = new Date(viewYear, viewMonth + 1, dayNum);
+        other = true;
+      }
+
+      const ds = fmt(dateObj);
+      const list = byDate[ds] || [];
+
+      const dots = list.slice()
+        .sort((a, b) => (PRIORITY[a.priority] || PRIORITY.medium).order -
+                        (PRIORITY[b.priority] || PRIORITY.medium).order)
+        .slice(0, 3)
+        .map(it => `<span class="dot" style="background:${(PRIORITY[it.priority] || PRIORITY.medium).color}"></span>`)
+        .join('');
+
+      let cls = 'cal-cell';
+      if (other) cls += ' other';
+      if (ds === today) cls += ' today';
+      if (selectedDate === ds) cls += ' selected';
+      if (list.length) cls += ' has-item';
+
+      const tip = list.map(l => esc(l.name)).join(' / ');
+      const aria = ds + (list.length ? `，有 ${list.length} 个截止目标` : '');
+      html += `<div class="${cls}" data-date="${ds}" title="${tip}"
+        tabindex="0" role="button" aria-label="${esc(aria)}">
+        <span>${dayNum}</span>
+        <div class="dots">${dots}</div>
+      </div>`;
+    }
+
+    $('calGrid').innerHTML = html;
+  }
+
+  function renderList() {
+    let arr = items.slice();
+
+    if (filterType !== 'all') arr = arr.filter(i => i.type === filterType);
+    if (selectedDate) arr = arr.filter(i => i.deadline === selectedDate);
+
+    if (sortMode === 'deadline') {
+      arr.sort((a, b) => a.deadline.localeCompare(b.deadline));
+    } else if (sortMode === 'priority') {
+      arr.sort((a, b) =>
+        (PRIORITY[a.priority] || PRIORITY.medium).order -
+        (PRIORITY[b.priority] || PRIORITY.medium).order ||
+        a.deadline.localeCompare(b.deadline));
+    } else {
+      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    const bar = $('dateFilterBar');
+    if (selectedDate) {
+      bar.classList.remove('hidden');
+      $('dfDate').textContent = selectedDate;
+    } else {
+      bar.classList.add('hidden');
+    }
+
+    const body = $('listBody');
+    if (arr.length === 0) {
+      body.innerHTML = `<div class="empty">
+        <div class="big">◎</div>
+        暂无投稿目标<br>点击上方「＋ 新增投稿目标」开始记录
+      </div>`;
+      return;
+    }
+    body.innerHTML = arr.map(itemHTML).join('');
+  }
+
+  function itemHTML(it) {
+    const d = daysUntil(it.deadline);
+    const p = PRIORITY[it.priority] || PRIORITY.medium;
+    const tp = TYPE[it.type] || TYPE.other;
+
+    let cdCls, cdTxt;
+    if (it.submittedDate) {
+      cdCls = 'done'; cdTxt = '已提交';
+    } else if (d < 0) {
+      cdCls = 'overdue'; cdTxt = `已截止 ${-d} 天`;
+    } else if (d === 0) {
+      cdCls = 'urgent'; cdTxt = '今天截止';
+    } else {
+      cdTxt = `还剩 ${d} 天`;
+      cdCls = d <= 3 ? 'urgent' : d <= 7 ? 'soon' : d <= 30 ? 'normal' : 'far';
+    }
+
+    const past = !it.submittedDate && d < 0;
+
+    const doneBtn = it.submittedDate
+      ? `<button class="mini undo" data-act="undo" data-id="${it.id}">撤销完成</button>`
+      : `<button class="mini done" data-act="done" data-id="${it.id}">✓ 完成投稿</button>`;
+
+    return `<div class="item-card${past ? ' past' : ''}" style="border-left-color:${p.color}">
+      <div class="item-head">
+        <div class="item-title">
+          <span class="badge ${tp.cls}">${tp.label}</span>
+          <span class="name">${esc(it.name)}</span>
+          <span class="prio" style="background:${p.color}1f;color:${p.color}">优先级 ${p.label}</span>
+        </div>
+        <span class="cd ${cdCls}">${cdTxt}</span>
+      </div>
+      <div class="item-meta">
+        <span>DDL：${it.deadline}</span>
+        ${it.paperTitle ? `<span>题目：${esc(it.paperTitle)}</span>` : ''}
+        ${it.submittedDate ? `<span>已提交：${it.submittedDate}</span>` : ''}
+      </div>
+      ${it.note ? `<div class="item-note">${esc(it.note)}</div>` : ''}
+      <div class="item-actions">
+        ${doneBtn}
+        <button class="mini" data-act="edit" data-id="${it.id}">编辑</button>
+        <button class="mini danger" data-act="del" data-id="${it.id}">删除</button>
+      </div>
+    </div>`;
+  }
+
+  /* ---------------- 弹窗 ---------------- */
+  function openModal(item) {
+    editingId = item ? item.id : null;
+    $('modalTitle').textContent = item ? '编辑投稿目标' : '新增投稿目标';
+    $('fName').value = item ? item.name : '';
+    $('fType').value = item ? item.type : 'conference';
+    $('fDeadline').value = item ? item.deadline : '';
+    $('fPriority').value = item ? item.priority : 'medium';
+    $('fPaper').value = item ? (item.paperTitle || '') : '';
+    $('fSubmitted').value = item ? (item.submittedDate || '') : '';
+    $('fNote').value = item ? (item.note || '') : '';
+    $('overlay').classList.add('show');
+    setTimeout(() => $('fName').focus(), 60);
+  }
+
+  function closeModal() {
+    $('overlay').classList.remove('show');
+    editingId = null;
+  }
+
+  function saveItem() {
+    const name = $('fName').value.trim();
+    const deadline = $('fDeadline').value;
+
+    if (!name) { alert('请填写名称'); $('fName').focus(); return; }
+    if (!deadline) { alert('请选择截止日期'); $('fDeadline').focus(); return; }
+
+    const data = {
+      name: name,
+      type: $('fType').value,
+      deadline: deadline,
+      priority: $('fPriority').value,
+      paperTitle: $('fPaper').value.trim(),
+      submittedDate: $('fSubmitted').value,
+      note: $('fNote').value.trim()
+    };
+
+    if (editingId) {
+      const it = items.find(i => i.id === editingId);
+      if (it) Object.assign(it, data);
+    } else {
+      items.push(Object.assign({ id: uid(), createdAt: Date.now() }, data));
+    }
+
+    save();
+    closeModal();
+    renderAll();
+  }
+
+  /* ---------------- 启动 ---------------- */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
